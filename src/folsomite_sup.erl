@@ -21,16 +21,22 @@ start_link() ->
 
 %% Supervisor callbacks
 init(no_arg) ->
-    GraphiteClientSup = {folsomite_graphite_client_sup,
-                         {folsomite_graphite_client_sup, start_link, []},
-                         permanent,
-                         1000,
-                         supervisor,
-                         [egraphite_corral]},
+    Sups = case application:get_env(folsomite, graphite_enable, true) of
+        true ->
+            [{folsomite_graphite_client_sup,
+                 {folsomite_graphite_client_sup, start_link, []},
+                 permanent,
+                 1000,
+                 supervisor,
+                 [egraphite_corral]}];
+
+        false ->
+            [] end,
+
     Worker = {folsomite_server,
               {folsomite_server, start_link, []},
               permanent,
               1000,
               worker,
               [folsomite_server]},
-    {ok, {{one_for_all, 5, 3600}, [GraphiteClientSup, Worker]}}.
+    {ok, {{one_for_all, 5, 3600}, [Worker | Sups]}}.

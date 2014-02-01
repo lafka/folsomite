@@ -136,10 +136,17 @@ send_stats(State) ->
           {K, V} <- Metrics]],
     zeta:sv_batch(Events),
     Message = [format1(State#state.node_key, M, Timestamp) || M <- Metrics],
-    case folsomite_graphite_client_sup:get_client() of
-        {ok, Socket} -> folsomite_graphite_client:send(Socket, Message);
-        {error, _} = Error -> Error
-    end.
+
+	UseGraphite = get_env(graphite_enable, true),
+	if UseGraphite ->
+		case folsomite_graphite_client_sup:get_client() of
+			{ok, Socket} -> folsomite_graphite_client:send(Socket, Message);
+			{error, _} = Error -> Error
+		end;
+
+		true ->
+			ok
+	end.
 
 format1(Base, {K, V}, Timestamp) ->
     ["folsomite.", Base, ".", space2dot(K), " ", stringify(V), " ", Timestamp, "\n"].
